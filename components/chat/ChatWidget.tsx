@@ -32,10 +32,25 @@ export function ChatWidget() {
   const abortRef = useRef<AbortController | null>(null);
   /** Último mensaje que falló, para el botón "Reintentar". */
   const failedRef = useRef<string | null>(null);
-  /** Marca de tiempo hasta la que ya se mostró todo (hora del servidor). */
+  /**
+   * Desde cuándo pide mensajes el sondeo. Solo avanza hasta lo que el sondeo
+   * ya trajo: nunca se adelanta a la hora de cierre de un turno, porque entre
+   * medio puede haber quedado el mensaje de una persona del equipo y saltárselo
+   * lo perdería para siempre.
+   */
   const seenUntilRef = useRef<string>(new Date().toISOString());
-  /** Ids ya mostrados: evita repetir si dos sondeos se cruzan. */
+  /**
+   * Ids de los mensajes ya mostrados, vengan del sondeo o de la respuesta a un
+   * turno. Es la única defensa contra repetirlos: el backend guarda lo que
+   * responde antes de devolverlo, así que en ese hueco un sondeo alcanza a
+   * traer lo mismo que el turno está por mostrar.
+   */
   const seenIdsRef = useRef<Set<string>>(new Set());
+  /**
+   * Hay un turno síncrono en vuelo. Sus respuestas llegan por el POST, así que
+   * el sondeo se queda quieto y no las adelanta a destiempo.
+   */
+  const turnInFlightRef = useRef(false);
 
   useEffect(() => {
     const onOpen = (event: Event) => {
@@ -70,6 +85,8 @@ export function ChatWidget() {
     let stopped = false;
 
     const poll = async () => {
+      if (turnInFlightRef.current) return;
+
       try {
         const { messages: incoming } = await fetchMessagesSince(
           seenUntilRef.current,
@@ -126,19 +143,32 @@ export function ChatWidget() {
 
       const controller = new AbortController();
       abortRef.current = controller;
+      turnInFlightRef.current = true;
 
       try {
-        const { status, replies, serverTime } = await sendMessage(text, controller.signal);
+        const { status, replies, messageIds, serverTime } = await sendMessage(
+          text,
+          controller.signal
+        );
 
-        // Las respuestas de este turno ya se muestran acá: el sondeo arranca
-        // desde la hora del servidor para no repetirlas.
-        if (serverTime) seenUntilRef.current = serverTime;
+        // Backend viejo, sin ids: no queda más que adelantar la marca de tiempo
+        // hasta el cierre del turno para que el sondeo no repita estas
+        // respuestas (a costa de saltarse lo que se haya guardado entre medio).
+        if (!messageIds && serverTime) seenUntilRef.current = serverTime;
 
-        const incoming: ChatMessage[] = replies.map((reply) => ({
-          id: nextId(),
-          kind: "ai",
-          text: reply,
-        }));
+        // Un sondeo que venía en camino pudo haber traído alguna ya. Las que se
+        // pintan acá quedan marcadas, así el sondeo las descarta cuando las
+        // traiga — que lo va a hacer, porque su marca de tiempo sigue siendo
+        // anterior a este turno.
+        const incoming: ChatMessage[] = [];
+        replies.forEach((reply, i) => {
+          const id = messageIds?.[i];
+          if (id) {
+            if (seenIdsRef.current.has(id)) return;
+            seenIdsRef.current.add(id);
+          }
+          incoming.push({ id: nextId(), kind: "ai", text: reply });
+        });
 
         // El bot puede quedarse callado a propósito: handoff a una persona o
         // control manual. Se explica en pantalla en vez de dejar el chat mudo;
@@ -169,6 +199,7 @@ export function ChatWidget() {
           },
         ]);
       } finally {
+        turnInFlightRef.current = false;
         setTyping(false);
         abortRef.current = null;
       }

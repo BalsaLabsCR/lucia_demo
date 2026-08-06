@@ -1,6 +1,7 @@
 /**
  * Tipos de la bandeja de conversaciones que muestra /lucia/chats.
- * Espejo de lucia-backend/src/admin/conversations.ts.
+ * Espejo de lo que devuelve `GET /admin/chats` en el backend
+ * (`src/admin/conversations.ts` del repo privado).
  */
 
 /** Quién tiene el control de la conversación. */

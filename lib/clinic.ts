@@ -8,9 +8,9 @@ import marianaSolis from "@/public/dra-mariana-solis.png";
  * Copy según la revisión de diseño "Sonrisa Pura".
  *
  * IMPORTANTE: precios, horarios, dirección y políticas deben coincidir con el
- * conocimiento de Lucía, que se edita en /lucia/knowledge (defaults en
- * `lucia-backend/src/knowledge/defaults.ts`). Si se cambian aquí sin cambiarlos
- * allá, el sitio y las respuestas de Lucía dejan de ser coherentes.
+ * conocimiento de Lucía, que se edita en /lucia/knowledge y vive en el backend.
+ * Si se cambian aquí sin cambiarlos allá, el sitio y las respuestas de Lucía
+ * dejan de ser coherentes.
  */
 export const CLINIC = {
   name: "Clínica Dental Sonrisa Pura",

@@ -1,6 +1,7 @@
 /**
  * Tipos de la agenda que muestra /lucia/citas.
- * Espejo de lucia-backend/src/admin/appointments.ts.
+ * Espejo de lo que devuelve `GET /admin/appointments` en el backend
+ * (`src/admin/appointments.ts` del repo privado).
  */
 
 /** confirmed = agendada · conflict = el horario estaba ocupado · cancelled = cancelada desde el panel. */

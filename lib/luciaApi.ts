@@ -4,7 +4,17 @@ export type ChatStatus = "replied" | "handoff" | "silent" | "duplicate";
 export interface ChatResponse {
   status: ChatStatus;
   replies: string[];
-  /** Hora del servidor al cerrar el turno; punto de partida del sondeo. */
+  /**
+   * Ids de esas respuestas, ya guardadas en el backend, en el mismo orden.
+   * Es la misma llave que trae el sondeo: marcándolas como vistas, lo que este
+   * turno muestra no se puede volver a pintar cuando el sondeo las traiga.
+   * Opcional solo por compatibilidad: sin él se cae al respaldo de `serverTime`.
+   */
+  messageIds?: string[];
+  /**
+   * Hora del servidor al cerrar el turno. Respaldo para backends que todavía
+   * no mandan `messageIds`; ahí es lo único que evita repetir las respuestas.
+   */
   serverTime?: string;
 }
 

@@ -1,7 +1,8 @@
 /**
  * Tipos del conocimiento de Lucía que edita la página /lucia/knowledge.
  *
- * IMPORTANTE: espejo de lucia-backend/src/knowledge/types.ts (allá con zod).
+ * IMPORTANTE: espejo del cuerpo de `GET`/`PUT /admin/knowledge` del backend
+ * (allá los tipos viven con zod, en `src/knowledge/types.ts` del repo privado).
  * Si se cambia la estructura en un lado hay que cambiarla en el otro.
  */
 

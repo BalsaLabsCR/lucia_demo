@@ -1,6 +1,7 @@
 /**
  * Tipos del listado de leads que muestra /lucia/leads.
- * Espejo de lucia-backend/src/admin/leads.ts.
+ * Espejo de lo que devuelve `GET /admin/leads` en el backend
+ * (`src/admin/leads.ts` del repo privado).
  */
 
 /** hot_lead = quiere contratar ya · lead = mostró interés. */
