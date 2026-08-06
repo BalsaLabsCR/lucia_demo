@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+/*
+ * Tokens del diseño "Sonrisa Pura" (ver DESIGN.md del entregable de diseño).
+ * Boutique editorial-cálida: fondos arena, verde profundo como única familia de
+ * acento, ámbar cálido reservado para los avisos de "ficticio".
+ */
+@theme {
+  /* Breakpoint único del diseño */
+  --breakpoint-dk: 900px;
+
+  /* Verdes */
+  --color-verde-950: #0b3a2e;
+  --color-verde-800: #0f5b49;
+  --color-verde-700: #3f7a68;
+  --color-verde-600: #14836a;
+  --color-verde-500: #1d9c7e;
+  --color-verde-300: #4fd6ae;
+  --color-verde-200: #8fe4c6;
+  --color-verde-100: #dff0ea;
+  --color-verde-50: #eef7f3;
+
+  /* Mentas (bordes de chips y trazos) */
+  --color-menta-300: #9ed4c0;
+  --color-menta-200: #b9e2d4;
+
+  /* Cremas: textos sobre verde oscuro */
+  --color-crema-100: #e8f2ec;
+  --color-crema-200: #dcebe3;
+  --color-crema-300: #bcd8cc;
+  --color-crema-500: #7fa694;
+
+  /* Arenas */
+  --color-arena-50: #faf7f1;
+  --color-arena-100: #f3ecdf;
+  --color-arena-200: #e7dcc8;
+  --color-arena-300: #d8cbb0;
+  --color-arena-400: #cdbf9f;
+  --color-blanco: #fffdf9;
+
+  /* Tintas */
+  --color-tinta-900: #1c2521;
+  --color-tinta-600: #47524c;
+  --color-tinta-500: #5c6a63;
+
+  /* Ámbar: marcas de "ficticio" */
+  --color-ambar-bg: #f8ecd6;
+  --color-ambar-bd: #e0c48e;
+  --color-ambar-tx: #7c5a17;
+
+  /* Error */
+  --color-error-bg: #fbeae6;
+  --color-error-bd: #eec4b8;
+  --color-error-tx: #8f3322;
+
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial,
+    sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --shadow-suave: 0 1px 2px rgba(20, 40, 30, 0.06);
+  --shadow-media: 0 10px 30px -12px rgba(15, 60, 45, 0.18);
+  --shadow-chat: 0 24px 64px -16px rgba(8, 35, 26, 0.4);
+  --shadow-fab: 0 10px 30px -8px rgba(8, 35, 26, 0.5);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  overflow-x: clip;
+}
+
+body {
+  background: var(--color-arena-50);
+  color: var(--color-tinta-900);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+summary:focus-visible {
+  outline: 2.5px solid currentColor;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+@keyframes pulseRing {
+  0% {
+    box-shadow: 0 0 0 0 rgba(20, 131, 106, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgba(20, 131, 106, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(20, 131, 106, 0);
+  }
+}
+
+@keyframes tdot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+.pulse-ring {
+  animation: pulseRing 2.6s ease-out infinite;
+}
+
+.typing-dot {
+  animation: tdot 1.2s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .pulse-ring,
+  .typing-dot {
+    animation: none;
+  }
+}
