@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import {
   SORT_LABELS,
   TYPE_LABELS,
-  type ConversionGoal,
   type Lead,
   type LeadCounts,
   type LeadSort,
@@ -58,7 +57,6 @@ const EMPTY_COUNTS: LeadCounts = {
 async function fetchLeads(query: string): Promise<{
   leads: Lead[];
   counts: LeadCounts;
-  conversionGoal: ConversionGoal;
 }> {
   const res = await fetch(`/api/lucia/leads?${query}`);
   const body = await res.json().catch(() => null);
@@ -66,14 +64,28 @@ async function fetchLeads(query: string): Promise<{
   return {
     leads: body.leads ?? [],
     counts: body.counts ?? EMPTY_COUNTS,
-    conversionGoal: body.conversionGoal ?? "appointment",
   };
+}
+
+/**
+ * La estrategia del deploy: qué es ganar una conversación en este negocio.
+ *
+ * Ya no viene con el listado de interesados. Ese endpoint lo sirve el plugin de
+ * leads, y la meta del negocio no es asunto suyo: un negocio puede tener leads
+ * y agenda y querer, ante todo, vender producto. La estrategia la reporta el
+ * core, que es quien la conoce.
+ */
+async function fetchStrategy(): Promise<string> {
+  const res = await fetch("/api/lucia/business-context");
+  if (!res.ok) return "";
+  const body = await res.json().catch(() => null);
+  return typeof body?.strategy === "string" ? body.strategy : "";
 }
 
 export function LeadsExplorer() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [counts, setCounts] = useState<LeadCounts>(EMPTY_COUNTS);
-  const [goal, setGoal] = useState<ConversionGoal>("appointment");
+  const [strategy, setStrategy] = useState("");
 
   const [channel, setChannel] = useState<ChannelFilter>("all");
   const [type, setType] = useState<TypeFilter>("all");
@@ -89,6 +101,17 @@ export function LeadsExplorer() {
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
     return () => clearTimeout(timer);
   }, [search]);
+
+  // La estrategia no cambia mientras el panel está abierto: se lee una vez.
+  useEffect(() => {
+    let cancelled = false;
+    void fetchStrategy().then((s) => {
+      if (!cancelled) setStrategy(s);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const query = new URLSearchParams({
     ...(channel !== "all" && { channel }),
@@ -108,7 +131,6 @@ export function LeadsExplorer() {
         if (cancelled) return;
         setLeads(data.leads);
         setCounts(data.counts);
-        setGoal(data.conversionGoal);
         setError(null);
       } catch (err) {
         if (!cancelled) {
@@ -129,7 +151,8 @@ export function LeadsExplorer() {
   }, [query]);
 
   /** El negocio agenda por sí mismo: hay algo que "cerrar" además del contacto. */
-  const books = goal === "appointment";
+  // Con la agenda como meta, la vista distingue quién ya agendó de quién no.
+  const books = strategy === "appointment-first";
 
   return (
     <div className="min-h-dvh bg-blanco">

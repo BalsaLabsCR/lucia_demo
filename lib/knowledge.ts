@@ -121,18 +121,10 @@ export interface Knowledge {
     name: string;
     /** 1 = más profesional/formal · 5 = más amigable/cercano. */
     tone: number;
-    /** Qué significa "ganar" una conversación: dejar la cita hecha o capturar el contacto. */
-    conversionGoal: ConversionGoal;
     extraInstructions: string;
   };
 }
 
-/**
- * appointment: el negocio agenda por sí mismo y la meta es la cita hecha.
- * lead: no hay agenda que el agente pueda tocar, así que capturar el interés
- * y el contacto ES la conversión.
- */
-export type ConversionGoal = "appointment" | "lead";
 
 /** Id corto para elementos nuevos de las listas. */
 export function newId(prefix: string): string {

@@ -12,7 +12,6 @@ export type LeadSort = "recent" | "oldest" | "name";
 /** pending = mostró interés y no agendó · booked = ya tiene cita. */
 export type LeadStatus = "pending" | "booked";
 
-export type ConversionGoal = "appointment" | "lead";
 
 /** El chat del que salió el lead. null si esa conversación fue borrada. */
 export interface LeadOrigin {
