@@ -56,12 +56,14 @@ WEB_CHAT_ALLOWED_ORIGINS="http://localhost:3001"
 | `lib/chatEvents.ts` | Evento con el que cualquier botón del sitio abre el widget |
 | `components/chat/` | Widget flotante (`ChatWidget`) y panel de conversación (`ChatPanel`) |
 | `components/*.tsx` | Secciones de la landing |
-| `app/lucia/knowledge/` | Configuración del conocimiento de Lucía (servicios, FAQ, horarios, personal, reglas, tono) |
+| `app/lucia/knowledge/` | Configuración del conocimiento de Lucía (servicios, **promociones**, FAQ, horarios, personal, reglas, tono) |
 | `app/lucia/chats/` | Bandeja de conversaciones: sección Urgente, filtros, respuesta manual y control IA/humano |
 | `app/lucia/citas/` | Agenda de citas que dejó agendadas Lucía, con cancelación |
 | `app/lucia/leads/` | Interesados, destacando a los que no llegaron a agendar |
+| `app/lucia/marketing/` | Campañas: brief, propuestas creativas, guion, revisión del material y paquete de producción |
+| `components/marketing/` | El taller de una campaña, paso por paso |
 | `app/api/lucia/` | Proxies server-side al backend (`/admin/*`) con `LUCIA_ADMIN_API_KEY` |
-| `lib/knowledge.ts`, `lib/chats.ts`, `lib/appointments.ts`, `lib/leads.ts` | Tipos espejo de los del backend (allá con zod) |
+| `lib/knowledge.ts`, `lib/chats.ts`, `lib/appointments.ts`, `lib/leads.ts`, `lib/marketing.ts` | Tipos espejo de los del backend (allá con zod) |
 | `lib/luciaAdmin.ts` | Puente a `/admin/*`. **Solo para route handlers**: importarlo desde un componente cliente filtraría la API key |
 
 ## Qué espera del backend
@@ -89,6 +91,13 @@ Dos superficies distintas, y la diferencia importa: la pública la llama el nave
 | `GET /admin/appointments` | Agenda (filtros: `channel`, `status`, `range`, `q`, `limit`) |
 | `POST /admin/appointments/:id/cancel` | Cancelar una cita y liberar el espacio en el calendario |
 | `GET /admin/leads` | Leads (filtros: `channel`, `type`, `q`, `sort`, `limit`) |
+| `/admin/marketing/*` | Todo el plugin de marketing: campañas, conceptos, guion, material, aprobaciones, métricas. Un solo proxy atrapa-todo en `app/api/lucia/marketing/[...path]` |
+| `…/assets/:id/content` | Los bytes de un archivo, detrás de `adminAuth`. El proxy los reenvía en binario y el navegador los pide como si fueran de este sitio: **no existe ninguna URL pública del material** |
+
+La sección de Marketing es la única que **escribe** cosas que después se
+publican, así que vale repetirlo: el navegador nunca habla con OpenAI ni con
+ningún proveedor. Pide al proxy, el proxy al backend de la clínica, y el backend
+—el único que tiene las llaves— al proveedor.
 
 ## Coherencia con el backend
 

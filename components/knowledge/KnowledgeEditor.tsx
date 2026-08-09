@@ -8,12 +8,14 @@ import { FaqSection } from "./FaqSection";
 import { GeneralSection } from "./GeneralSection";
 import { RulesSection } from "./RulesSection";
 import { ScheduleSection } from "./ScheduleSection";
+import { PromotionsSection } from "./PromotionsSection";
 import { ServicesSection } from "./ServicesSection";
 import { StaffSection } from "./StaffSection";
 
 const NAV = [
   { href: "#general", label: "General" },
   { href: "#servicios", label: "Servicios" },
+  { href: "#promociones", label: "Promociones" },
   { href: "#faq", label: "FAQ" },
   { href: "#horarios", label: "Horarios" },
   { href: "#personal", label: "Personal" },
@@ -173,6 +175,11 @@ export function KnowledgeEditor() {
             <ServicesSection
               value={knowledge.services}
               onChange={(services) => setKnowledge({ ...knowledge, services })}
+            />
+            <PromotionsSection
+              value={knowledge.promotions ?? []}
+              services={knowledge.services}
+              onChange={(promotions) => setKnowledge({ ...knowledge, promotions })}
             />
             <FaqSection
               value={knowledge.faqs}
