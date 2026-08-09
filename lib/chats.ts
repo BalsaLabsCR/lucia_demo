@@ -58,6 +58,8 @@ export function displayName(c: ConversationSummary): string {
 export const CHANNEL_LABELS: Record<string, string> = {
   whatsapp: "WhatsApp",
   web: "Sitio web",
+  // No es un canal de conversación: es una cita que alguien apuntó en el panel.
+  manual: "A mano",
 };
 
 export const STATE_LABELS: Record<ControlState, string> = {

@@ -20,13 +20,10 @@ interface Props {
 function StatusBadge({ status }: { status: string }) {
   const label = STATUS_LABELS[status] ?? status;
 
-  // El conflicto es el que hay que resolver: esa cita NO quedó agendada.
   const cls =
-    status === "conflict"
-      ? "border-error-bd bg-error-bg text-error-tx"
-      : status === "cancelled"
-        ? "border-arena-300 bg-arena-100 text-tinta-500"
-        : "border-menta-200 bg-verde-50 text-verde-800";
+    status === "cancelled"
+      ? "border-arena-300 bg-arena-100 text-tinta-500"
+      : "border-menta-200 bg-verde-50 text-verde-800";
 
   return (
     <span
@@ -101,6 +98,8 @@ function AppointmentRow({
           >
             Ver conversación ({appointment.conversation.messageCount})
           </Link>
+        ) : appointment.channel === "manual" ? (
+          <span className="text-tinta-500 italic">Agendada a mano</span>
         ) : (
           <span className="text-tinta-500 italic">Conversación borrada</span>
         )}
