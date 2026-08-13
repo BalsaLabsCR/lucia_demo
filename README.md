@@ -62,8 +62,11 @@ WEB_CHAT_ALLOWED_ORIGINS="http://localhost:3001"
 | `app/lucia/leads/` | Interesados, destacando a los que no llegaron a agendar |
 | `app/lucia/marketing/` | Campañas: brief, propuestas creativas, guion, revisión del material y paquete de producción |
 | `components/marketing/` | El taller de una campaña, paso por paso |
+| `app/lucia/copiloto/` | **Copiloto de Negocio**: métricas, alertas, recomendaciones con evidencia, aprobación y directivas |
+| `components/copilot/` | El centro de decisión: resumen, alertas, tarjetas de recomendación, directivas y selector de escenarios |
 | `app/api/lucia/` | Proxies server-side al backend (`/admin/*`) con `LUCIA_ADMIN_API_KEY` |
-| `lib/knowledge.ts`, `lib/chats.ts`, `lib/appointments.ts`, `lib/leads.ts`, `lib/marketing.ts` | Tipos espejo de los del backend (allá con zod) |
+| `lib/knowledge.ts`, `lib/chats.ts`, `lib/appointments.ts`, `lib/leads.ts`, `lib/marketing.ts`, `lib/copilot.ts` | Tipos espejo de los del backend (allá con zod) |
+| `scripts/check-copilot.tsx` | Batería del panel del copiloto: renderiza los componentes a HTML y revisa lo que sale. `npm run check:copilot` |
 | `lib/luciaAdmin.ts` | Puente a `/admin/*`. **Solo para route handlers**: importarlo desde un componente cliente filtraría la API key |
 
 ## Qué espera del backend
@@ -93,11 +96,43 @@ Dos superficies distintas, y la diferencia importa: la pública la llama el nave
 | `GET /admin/leads` | Leads (filtros: `channel`, `type`, `q`, `sort`, `limit`) |
 | `/admin/marketing/*` | Todo el plugin de marketing: campañas, conceptos, guion, material, aprobaciones, métricas. Un solo proxy atrapa-todo en `app/api/lucia/marketing/[...path]` |
 | `…/assets/:id/content` | Los bytes de un archivo, detrás de `adminAuth`. El proxy los reenvía en binario y el navegador los pide como si fueran de este sitio: **no existe ninguna URL pública del material** |
+| `/admin/business/*` | Todo el copiloto: resumen, análisis, métricas, señales, recomendaciones, aprobación, ejecución de acciones, directivas y escenarios. Un solo proxy atrapa-todo en `app/api/lucia/copilot/[...path]` |
 
 La sección de Marketing es la única que **escribe** cosas que después se
 publican, así que vale repetirlo: el navegador nunca habla con OpenAI ni con
 ningún proveedor. Pide al proxy, el proxy al backend de la clínica, y el backend
 —el único que tiene las llaves— al proveedor.
+
+## El Copiloto de Negocio
+
+`/lucia/copiloto` es un centro de decisión, no otro chat: no hay una caja de
+texto para preguntarle nada al modelo. La pantalla está ordenada como se toma
+una decisión — cómo viene el negocio, qué se detectó, qué conviene hacer, y qué
+quedó aplicando Lucía.
+
+Tres cosas que la sección hace a propósito:
+
+- **Aprobar y ejecutar son dos pasos.** Aprobar una recomendación no crea nada;
+  después se elige qué acciones ejecutar, cada una con su botón y con una línea
+  que dice qué va a pasar si se aprieta.
+- **Los supuestos y los límites se muestran ANTES de los botones**, no en un pie
+  de página. Son justamente lo que hay que haber leído antes de aprobar.
+- **Cada número dice de dónde salió.** Quien mira el panel tiene que poder
+  preguntar "¿de dónde sacaste eso?" y encontrar la respuesta en la tarjeta.
+
+### Modo presentación
+
+El botón de arriba a la derecha agranda la tipografía y esconde el detalle
+técnico —fuentes de los datos, marcas de tiempo, explicaciones de cada acción—
+para proyectar. Lo que **no** esconde nunca es el aviso de datos simulados ni el
+estado de cada recomendación.
+
+### Escenarios
+
+El selector reemplaza los datos de demostración **en el backend**. Cada tarjeta
+explica qué situación simula, y activar pide confirmación diciendo exactamente
+qué se borra y qué no. Si el backend tiene la demo apagada, la sección lo dice y
+explica el motivo en vez de esconder el botón.
 
 ## Coherencia con el backend
 

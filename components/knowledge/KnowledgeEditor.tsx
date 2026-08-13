@@ -133,6 +133,12 @@ export function KnowledgeEditor() {
               >
                 Leads
               </Link>
+              <Link
+                href="/lucia/copiloto"
+                className="rounded-full border-[1.5px] border-menta-200 bg-blanco px-4 py-2 text-[13px] font-semibold text-verde-800 transition-colors hover:bg-verde-50"
+              >
+                Copiloto
+              </Link>
               <SaveButton dirty={dirty} saveState={saveState} onSave={save} />
             </div>
           </div>

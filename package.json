@@ -6,7 +6,9 @@
     "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start -p 3001",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check:copilot": "tsx scripts/check-copilot.tsx",
+    "check": "tsc --noEmit && npm run lint && npm run check:copilot"
   },
   "dependencies": {
     "next": "16.2.12",
@@ -21,6 +23,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "tailwindcss": "^4",
+    "tsx": "^4.23.12",
     "typescript": "^5"
   }
 }
