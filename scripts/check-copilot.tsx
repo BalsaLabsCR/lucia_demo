@@ -27,19 +27,23 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactElement } from "react";
 
+import { ActivityCard } from "../components/copilot/ActivityCard";
 import { MetricGrid } from "../components/copilot/MetricGrid";
 import { SignalList } from "../components/copilot/SignalList";
 import { RecommendationCard } from "../components/copilot/RecommendationCard";
 import { DirectiveList } from "../components/copilot/DirectiveList";
 import { ScenarioPicker } from "../components/copilot/ScenarioPicker";
 import {
+  campaignDestination,
   formatMetric,
   isExecutable,
+  resetSummary,
   trendOf,
   type BusinessMetric,
   type BusinessRecommendation,
   type BusinessSignal,
   type ConversationDirective,
+  type DemoActivity,
   type ProposedAction,
   type ScenarioState,
 } from "../lib/copilot";
@@ -626,6 +630,147 @@ function main(): void {
   check(
     "pero NUNCA esconde el botón de ejecutar ni el estado",
     texto(recProyectada).includes("Ejecutar") && texto(recProyectada).includes("Aprobada")
+  );
+
+  // =====================================================================
+  section("9. El salto al estudio después de ejecutar");
+  // =====================================================================
+
+  // Es el eslabón que cierra el paso del copiloto a marketing en vivo. Si se
+  // rompe, la acción se ejecuta igual y nadie se entera de que la campaña
+  // quedó creada: hay que ir a buscarla a mano entre las demás.
+  const conCampaña = { linkedCampaignId: "camp_abc123" };
+  check(
+    "una acción que creó campaña manda al estudio, abierto en ESA campaña",
+    campaignDestination(conCampaña) === "/lucia/marketing?campaign=camp_abc123",
+    String(campaignDestination(conCampaña))
+  );
+  check(
+    "una acción sin campaña —directiva, tarea, métrica— no manda a ningún lado",
+    campaignDestination({ linkedCampaignId: null }) === null
+  );
+  check(
+    "y una respuesta sin acción tampoco rompe",
+    campaignDestination(null) === null
+  );
+  check(
+    "un id vacío no produce un enlace a la lista entera",
+    campaignDestination({ linkedCampaignId: "  " }) === null
+  );
+  check(
+    "el id viaja codificado, no crudo en la barra de direcciones",
+    campaignDestination({ linkedCampaignId: "a b&c=d" }) ===
+      "/lucia/marketing?campaign=a%20b%26c%3Dd",
+    String(campaignDestination({ linkedCampaignId: "a b&c=d" }))
+  );
+
+  // =====================================================================
+  section("10. La tarjeta de actividad en vivo");
+  // =====================================================================
+
+  // Lo que esta tarjeta tiene que dejar claro no es un número: es de QUIÉN son
+  // los datos. El resto del panel muestra el histórico simulado de una clínica
+  // ficticia; esto muestra lo que el público acaba de generar. Si se confunden,
+  // la demostración deja de demostrar nada.
+  const actividad: DemoActivity = {
+    since: "2026-08-13T15:00:00.000Z",
+    windowMinutes: 90,
+    conversations: 4,
+    questions: 11,
+    replies: 11,
+    leads: 3,
+    hotLeads: 1,
+    appointments: 1,
+    handoffs: 1,
+    intents: 2,
+    actions: [
+      { tool: "proponer_horarios", count: 3 },
+      { tool: "agendar_cita", count: 1 },
+    ],
+    bySource: [
+      { source: "instagram", campaignId: "blanqueamiento-sensibilidad", count: 2 },
+    ],
+  };
+
+  const tarjetaHtml = render(<ActivityCard activity={actividad} presentacion={false} />);
+  const tarjeta = texto(tarjetaHtml);
+
+  check(
+    "dice de cuándo es lo que muestra, con todas las letras",
+    tarjeta.includes("Actividad desde que comenzó la demostración") &&
+      tarjeta.includes("En vivo · datos reales")
+  );
+  check(
+    "y avisa que no muestra datos de nadie",
+    tarjeta.includes("Sin nombres, teléfonos ni texto de los mensajes")
+  );
+  check(
+    "muestra los conteos del rato",
+    tarjeta.includes("Conversaciones") && tarjeta.includes("4") && tarjeta.includes("11")
+  );
+  check(
+    "traduce las herramientas a lo que entiende una persona",
+    tarjeta.includes("Propuso horarios") && tarjeta.includes("Agendó una cita"),
+    "no muestra proponer_horarios ni agendar_cita en crudo"
+  );
+  check(
+    "no filtra el nombre técnico de la herramienta",
+    !tarjeta.includes("proponer_horarios"),
+    "lo que se lee es la etiqueta, no la llave interna"
+  );
+  check(
+    "cierra el círculo: de qué campaña llegaron",
+    tarjeta.includes("instagram") && tarjeta.includes("blanqueamiento-sensibilidad")
+  );
+
+  // Sin nadie que haya llegado por una campaña, esa sección no ocupa espacio
+  // diciendo "sin origen": no informaría nada.
+  const sinOrigen = texto(
+    render(<ActivityCard activity={{ ...actividad, bySource: [] }} presentacion={false} />)
+  );
+  check("sin campañas de origen, no muestra esa sección", !sinOrigen.includes("De dónde llegaron"));
+
+  const proyectada = render(<ActivityCard activity={actividad} presentacion={true} />);
+  check(
+    "en modo presentación agranda los números",
+    proyectada.includes("text-[30px]") && !proyectada.includes("text-[22px]")
+  );
+
+  // =====================================================================
+  section("11. El resumen del reinicio");
+  // =====================================================================
+
+  // El aviso que queda en pantalla después de apretar el botón. Tiene que decir
+  // SIEMPRE qué pasó con las conversaciones del público: es lo único que la
+  // operación destruye sin haberlo sembrado, y quien lo apretó tiene que poder
+  // confirmar que no pasó lo que no quería que pasara.
+  const conBorrado = resetSummary({
+    business: { presetId: "sonrisa-pura", name: "Clínica Dental Sonrisa Pura", services: 8, promotions: 1 },
+    scenario: { id: "marketing_conversion_gap", label: "Mucho interés, pocas citas" },
+    live: { deletedConversations: 4, deletedLeads: 3, deletedAppointments: 1 },
+    recommendations: 3,
+  });
+  check(
+    "dice qué negocio quedó sembrado y con qué escenario",
+    conBorrado.includes("Clínica Dental Sonrisa Pura") &&
+      conBorrado.includes("Mucho interés, pocas citas"),
+    conBorrado
+  );
+  check(
+    "y cuántas conversaciones del público borró",
+    conBorrado.includes("4 conversación(es) del público borradas")
+  );
+
+  const sinBorrado = resetSummary({
+    business: { presetId: "sonrisa-pura", name: "Clínica Dental Sonrisa Pura", services: 8, promotions: 1 },
+    scenario: null,
+    live: { deletedConversations: 0, deletedLeads: 0, deletedAppointments: 0 },
+    recommendations: null,
+  });
+  check(
+    "cuando no borró nada lo dice igual, en vez de callarlo",
+    sinBorrado.includes("no se borró ninguna conversación"),
+    sinBorrado
   );
 
   console.log(failures === 0 ? "\nTODO OK" : `\n${failures} FALLAS`);

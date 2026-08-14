@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { OPEN_CHAT_EVENT, type OpenChatDetail } from "@/lib/chatEvents";
 import { CLINIC } from "@/lib/clinic";
-import { fetchMessagesSince, sendMessage } from "@/lib/luciaApi";
+import { captureAttribution, fetchMessagesSince, sendMessage } from "@/lib/luciaApi";
 import { ChatPanel } from "./ChatPanel";
 import type { ChatMessage } from "./types";
 
@@ -72,6 +72,19 @@ export function ChatWidget() {
   }, [open]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  /**
+   * De dónde llegó el visitante, capturado al montar.
+   *
+   * Se hace acá y no al abrir el chat: alguien que entra por el QR de una
+   * campaña puede leer la página un rato antes de escribir, y si la captura
+   * esperara a la primera pulsación, bastaría con que navegara a otra sección
+   * para perder de dónde vino. El widget está en todas las páginas, así que
+   * montarse es el momento más temprano posible.
+   */
+  useEffect(() => {
+    captureAttribution(window.location.search);
+  }, []);
 
   /**
    * Sondeo mientras el chat está abierto: trae lo que escribió Lucía o una

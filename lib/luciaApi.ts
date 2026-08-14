@@ -38,6 +38,58 @@ export function getSessionId(): string {
   return id;
 }
 
+const ATTRIBUTION_KEY = "lucia-demo-attribution";
+
+/**
+ * De dónde llegó el visitante, leído de la URL.
+ *
+ * `/chat?source=instagram&campaign=blanqueamiento-sensibilidad&creative=concepto-2`
+ *
+ * Se guarda en `sessionStorage` junto al id de sesión y por la misma razón: la
+ * atribución pertenece a ESTA conversación, y una pestaña nueva es una
+ * conversación nueva. Guardarla al llegar —y no leer la URL en cada mensaje—
+ * es lo que hace que siga valiendo después de que la persona navegue a otra
+ * página del sitio y vuelva al chat.
+ *
+ * No se pisa: si ya hay una guardada, la de la URL nueva se ignora. Es la misma
+ * regla de first-touch que aplica el backend, adelantada acá para no mandar dos
+ * atribuciones distintas en la misma conversación.
+ */
+export function captureAttribution(search: string): void {
+  if (sessionStorage.getItem(ATTRIBUTION_KEY)) return;
+
+  const params = new URLSearchParams(search);
+  const source = params.get("source");
+  if (!source) return;
+
+  // Solo estas cuatro llaves viajan. Lo que el backend no espera lo rechaza
+  // entero, así que mandar de más es perder la atribución completa.
+  const atribucion: Record<string, string> = { source };
+  for (const [desde, hacia] of [
+    ["campaign", "campaignId"],
+    ["creative", "creativeId"],
+    ["medium", "medium"],
+  ] as const) {
+    const valor = params.get(desde);
+    if (valor) atribucion[hacia] = valor;
+  }
+
+  sessionStorage.setItem(ATTRIBUTION_KEY, JSON.stringify(atribucion));
+}
+
+/** La atribución guardada, o `null`. La valida el backend, no esto. */
+export function getAttribution(): Record<string, string> | null {
+  const raw = sessionStorage.getItem(ATTRIBUTION_KEY);
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as Record<string, string>;
+  } catch {
+    // Un valor corrupto en sessionStorage no puede dejar sin chat a nadie.
+    return null;
+  }
+}
+
 export interface PendingMessage {
   id: string;
   /** assistant = Lucía · owner = una persona del equipo. */
@@ -74,7 +126,14 @@ export async function sendMessage(
   const res = await fetch(`${API_URL}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sessionId: getSessionId(), message }),
+    // La atribución viaja en cada mensaje y no solo en el primero: el backend
+    // aplica first-touch, así que repetirla es inofensivo y evita depender de
+    // que el primer envío haya sido el que la llevaba.
+    body: JSON.stringify({
+      sessionId: getSessionId(),
+      message,
+      ...(getAttribution() ? { attribution: getAttribution() } : {}),
+    }),
     signal,
   });
 

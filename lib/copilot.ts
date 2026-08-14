@@ -327,6 +327,83 @@ export function confidenceLabel(confidence: number): string {
   return "Baja";
 }
 
+/**
+ * Lo que pasó desde que empezó la demostración.
+ *
+ * Son datos REALES —filas creadas porque alguien del público le escribió a
+ * Lucía— y por eso viven en su propia tarjeta, separada del resto del panel,
+ * que muestra el histórico simulado del escenario. Mezclarlos sería el único
+ * truco que esta demostración no se puede permitir.
+ *
+ * No trae ni un nombre, ni un teléfono, ni una línea de ningún mensaje: eso lo
+ * garantiza el backend, no esta pantalla.
+ */
+export interface DemoActivity {
+  since: string;
+  windowMinutes: number;
+  conversations: number;
+  questions: number;
+  replies: number;
+  leads: number;
+  hotLeads: number;
+  appointments: number;
+  handoffs: number;
+  intents: number;
+  /** Qué herramientas usó Lucía. NO son objeciones: ver el backend. */
+  actions: { tool: string; count: number }[];
+  bySource: { source: string; campaignId: string | null; count: number }[];
+}
+
+/** Lo que devuelve el reinicio completo de la demostración. */
+export interface DemoResetResult {
+  business: { presetId: string; name: string; services: number; promotions: number };
+  scenario: { id: string; label: string } | null;
+  live: { deletedConversations: number; deletedLeads: number; deletedAppointments: number };
+  /** Cuántas recomendaciones quedaron listas. `null` si no se analizó. */
+  recommendations: number | null;
+}
+
+/**
+ * El resumen de un reinicio, en una línea para el aviso del panel.
+ *
+ * Dice SIEMPRE si borró conversaciones del público y cuántas. Es la única parte
+ * de la operación que destruye algo que no sembró la demostración, así que
+ * callarla cuando el número es cero sería peor: quien apretó el botón tiene que
+ * poder confirmar que no pasó lo que no quería que pasara.
+ */
+export function resetSummary(result: DemoResetResult): string {
+  const partes = [
+    `${result.business.name} con ${result.business.services} servicios`,
+    result.scenario ? `escenario "${result.scenario.label}"` : "sin escenario activo",
+    // El análisis puede haber fallado sin tumbar el reinicio. Cuando pasa se
+    // dice, porque es la diferencia entre abrir el panel con recomendaciones o
+    // abrirlo vacío delante de la sala.
+    result.recommendations === null
+      ? "SIN analizar: corré «Analizar el negocio» antes de empezar"
+      : `${result.recommendations} recomendación(es) listas`,
+    result.live.deletedConversations > 0
+      ? `${result.live.deletedConversations} conversación(es) del público borradas`
+      : "no se borró ninguna conversación",
+  ];
+  return `Listo: ${partes.join(" · ")}.`;
+}
+
+/** Cómo se llama cada herramienta en la pantalla. */
+const NOMBRE_DE_HERRAMIENTA: Record<string, string> = {
+  proponer_horarios: "Propuso horarios",
+  agendar_cita: "Agendó una cita",
+  registrar_lead: "Registró un interesado",
+};
+
+export function toolLabel(tool: string): string {
+  return NOMBRE_DE_HERRAMIENTA[tool] ?? tool;
+}
+
+/** true si no pasó nada todavía: sirve para no mostrar una tarjeta de ceros. */
+export function isQuiet(activity: DemoActivity | null): boolean {
+  return !activity || activity.conversations === 0;
+}
+
 /** true si la acción todavía se puede ejecutar. */
 export function isExecutable(
   recommendation: BusinessRecommendation,
@@ -336,6 +413,27 @@ export function isExecutable(
     (recommendation.status === "approved" || recommendation.status === "executed") &&
     action.status === "pending"
   );
+}
+
+/**
+ * A dónde ir después de ejecutar una acción, o `null` si no hay a dónde.
+ *
+ * Es una función aparte y no dos líneas dentro del componente para poder
+ * probarla: el salto al estudio es el eslabón que cierra el paso del copiloto a
+ * marketing en la demostración, y si se rompe, se rompe en vivo y sin aviso —
+ * la acción se ejecuta igual, solo que nadie llega a la campaña.
+ *
+ * Devuelve `null` cuando la acción no creó ninguna campaña, que es el caso de
+ * una directiva, una tarea interna o una métrica a vigilar: esas no tienen
+ * pantalla propia adonde llevar a nadie.
+ */
+export function campaignDestination(action: Pick<ProposedAction, "linkedCampaignId"> | null): string | null {
+  const id = action?.linkedCampaignId;
+  if (typeof id !== "string" || id.trim() === "") return null;
+
+  // El id se codifica aunque hoy sea un cuid: es lo que separa "abrir una
+  // campaña" de "meter lo que venga en la barra de direcciones".
+  return `/lucia/marketing?campaign=${encodeURIComponent(id)}`;
 }
 
 /**

@@ -2,15 +2,21 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
+  campaignDestination,
   copilotApi,
   dateTime,
+  resetSummary,
+  type DemoActivity,
+  type DemoResetResult,
   type BusinessRecommendation,
   type ConversationDirective,
   type CopilotSummary,
   type ProposedAction,
   type ScenarioState,
 } from "@/lib/copilot";
+import { ActivityCard } from "./ActivityCard";
 import { DirectiveList } from "./DirectiveList";
 import { MetricGrid } from "./MetricGrid";
 import { RecommendationCard } from "./RecommendationCard";
@@ -33,19 +39,29 @@ import { SignalList } from "./SignalList";
  */
 
 /** Una lectura completa. Devuelve datos o lanza, sin estado de React adentro. */
-async function leerTodo(): Promise<{ summary: CopilotSummary; scenarios: ScenarioState }> {
-  const [summary, scenarios] = await Promise.all([
+async function leerTodo(): Promise<{
+  summary: CopilotSummary;
+  scenarios: ScenarioState;
+  activity: DemoActivity | null;
+}> {
+  const [summary, scenarios, activity] = await Promise.all([
     copilotApi<CopilotSummary>("summary"),
     copilotApi<ScenarioState>("scenarios"),
+    // La actividad en vivo NO puede tumbar el panel: es lo accesorio del
+    // relato, y el copiloto tiene que poder mostrarse aunque esa consulta
+    // falle. Un backend viejo, sin esta ruta, devuelve 404 y acá queda `null`.
+    copilotApi<DemoActivity>("demo/activity").catch(() => null),
   ]);
-  return { summary, scenarios };
+  return { summary, scenarios, activity };
 }
 
 type Vista = "panel" | "escenarios";
 
 export function CopilotExplorer() {
+  const router = useRouter();
   const [summary, setSummary] = useState<CopilotSummary | null>(null);
   const [scenarios, setScenarios] = useState<ScenarioState | null>(null);
+  const [activity, setActivity] = useState<DemoActivity | null>(null);
   const [vista, setVista] = useState<Vista>("panel");
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +84,7 @@ export function CopilotExplorer() {
         if (cancelled) return;
         setSummary(datos.summary);
         setScenarios(datos.scenarios);
+        setActivity(datos.activity);
         setError(null);
         setCargando(false);
       },
@@ -129,6 +146,36 @@ export function CopilotExplorer() {
       return "Escenario reiniciado: los datos volvieron al punto de partida.";
     });
 
+  /**
+   * Dejar todo listo para dar la demostración de nuevo.
+   *
+   * Pide confirmación y lo hace nombrando lo que se va a borrar. Es el único
+   * botón del panel que destruye algo que la demostración no sembró —las
+   * conversaciones que dejó el público— y esa parte no puede pasar de
+   * incógnito detrás de un "¿seguro?".
+   */
+  const reiniciarTodo = () => {
+    const ok = window.confirm(
+      "Esto deja todo listo para dar la demostración otra vez:\n\n" +
+        "· vuelve a sembrar los servicios y precios del negocio\n" +
+        "· vuelve a sembrar los datos del escenario\n" +
+        "· BORRA las conversaciones del chat del sitio de las últimas 3 horas,\n" +
+        "  con sus interesados y sus citas\n\n" +
+        "Las conversaciones de WhatsApp no se tocan.\n\n¿Reiniciar?"
+    );
+    if (!ok) return;
+
+    void operar("Reiniciando la demostración…", async () => {
+      const resultado = await copilotApi<DemoResetResult>("demo/reset", {
+        method: "POST",
+        // Tres horas: cubre una charla con su montaje y su sobremesa, y no
+        // llega al día anterior.
+        body: { clearLiveMinutes: 180 },
+      });
+      return resetSummary(resultado);
+    });
+  };
+
   const aprobar = (recommendation: BusinessRecommendation) =>
     operar("Aprobando…", async () => {
       await copilotApi(`recommendations/${recommendation.id}/approve`, {
@@ -144,15 +191,39 @@ export function CopilotExplorer() {
       return "Rechazada.";
     });
 
+  /**
+   * Ejecuta una acción y, si creó una campaña, abre el estudio en ella.
+   *
+   * El salto importa: sin él, quien aprueba un brief lee "se creó la campaña X"
+   * y tiene que ir a buscarla a mano entre las demás. La acción ya devuelve
+   * `linkedCampaignId` —lo llenó `marketingBridge` al crearla— así que el
+   * destino es exacto y no una lista donde adivinar cuál es la nueva.
+   *
+   * Se navega también cuando la acción YA estaba ejecutada: apretar dos veces
+   * tiene que llevar al mismo lugar, no quedarse con un aviso y sin campaña.
+   */
   const ejecutar = (recommendation: BusinessRecommendation, action: ProposedAction) =>
     operar("Ejecutando la acción…", async () => {
-      const resultado = await copilotApi<{ summary: string; alreadyExecuted: boolean }>(
+      const resultado = await copilotApi<{
+        action: ProposedAction;
+        summary: string;
+        alreadyExecuted: boolean;
+      }>(
         `recommendations/${recommendation.id}/actions/${action.id}/execute`,
         // La llave de idempotencia viaja para que un reintento no ejecute dos
         // veces: si el pedido llegó y la respuesta se perdió, el segundo
         // devuelve lo que produjo el primero en vez de crear otra campaña.
         { method: "POST", body: { idempotencyKey: action.idempotencyKey } }
       );
+
+      const destino = campaignDestination(resultado.action ?? null);
+      if (destino) {
+        router.push(destino);
+        return resultado.alreadyExecuted
+          ? "Esa acción ya estaba hecha. Abriendo la campaña…"
+          : `${resultado.summary} Abriendo el estudio…`;
+      }
+
       return resultado.alreadyExecuted ? "Esa acción ya estaba hecha." : resultado.summary;
     });
 
@@ -194,6 +265,7 @@ export function CopilotExplorer() {
         onTogglePresentacion={() => setPresentacion((v) => !v)}
         onCambiarEscenario={() => setVista("escenarios")}
         onResetear={resetear}
+        onReiniciarTodo={reiniciarTodo}
         onAnalizar={analizar}
       />
 
@@ -230,6 +302,19 @@ export function CopilotExplorer() {
         />
       ) : (
         <div className="flex flex-col gap-8">
+          {/*
+            Va PRIMERO, arriba de las métricas del mes. Es el orden del relato:
+            el público acaba de conversar con Lucía y lo primero que tiene que
+            ver es lo que él mismo generó. Después viene el histórico, que es
+            simulado y está rotulado como tal.
+
+            Si nadie escribió todavía, la tarjeta no aparece: una fila de ceros
+            no informa nada y le quita el efecto al momento en que sí aparece.
+          */}
+          {activity && activity.conversations > 0 && (
+            <ActivityCard activity={activity} presentacion={presentacion} />
+          )}
+
           <section>
             <SeccionTitulo>Cómo viene el negocio</SeccionTitulo>
             <MetricGrid metrics={summary?.metrics ?? []} presentacion={presentacion} />
@@ -301,6 +386,7 @@ function Encabezado({
   onTogglePresentacion,
   onCambiarEscenario,
   onResetear,
+  onReiniciarTodo,
   onAnalizar,
 }: {
   summary: CopilotSummary | null;
@@ -310,6 +396,7 @@ function Encabezado({
   onTogglePresentacion: () => void;
   onCambiarEscenario: () => void;
   onResetear: () => void;
+  onReiniciarTodo: () => void;
   onAnalizar: () => void;
 }) {
   const run = summary?.run ?? null;
@@ -409,6 +496,22 @@ function Encabezado({
         >
           Reiniciar escenario
         </button>
+        {/*
+          El reinicio completo va al final y con borde de advertencia: es el
+          único de los cuatro que borra algo que la demostración no sembró. En
+          modo presentación se esconde — nadie quiere apretarlo por error con la
+          pantalla proyectada y la sala mirando.
+        */}
+        {!presentacion && (
+          <button
+            type="button"
+            disabled={ocupado || !scenarios?.enabled}
+            onClick={onReiniciarTodo}
+            className="rounded-lg border-[1.5px] border-ambar-bd bg-blanco px-4 py-2.5 text-[14px] font-semibold text-ambar-tx transition-colors hover:bg-ambar-bg disabled:opacity-50"
+          >
+            Dejar listo para otra demo
+          </button>
+        )}
       </div>
     </header>
   );
