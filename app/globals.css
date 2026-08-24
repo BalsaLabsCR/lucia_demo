@@ -53,6 +53,50 @@
   --color-error-bd: #eec4b8;
   --color-error-tx: #8f3322;
 
+  /*
+   * Sala de Operación (/lucia/negocio): dos temas, una sola gramática.
+   *
+   * El tema CLARO es el default y es el que hay que usar en un proyector. Un
+   * proyector no proyecta negro: proyecta ausencia de luz, así que en una sala
+   * con las luces prendidas el "negro" es el gris de la pantalla iluminada por
+   * el ambiente y el contraste se desploma. Con fondo claro pasa al revés — el
+   * aparato tira luz a máxima potencia y le gana al ambiente. Lo primero que se
+   * pierde proyectando en oscuro es justamente el detalle de esta pantalla: los
+   * rótulos en mono de 10px y los bordes al 20% de opacidad.
+   *
+   * El OSCURO se queda para una sala a oscuras, donde sí se ve mejor. Se cambia
+   * con la tecla `t` o con `?tema=oscuro`, porque cuál conviene lo decide el
+   * cuarto y eso se sabe al llegar.
+   *
+   * Los dos son tonales, sin familia de acento: la jerarquía la lleva el
+   * CONTRASTE contra el fondo. `sala-tx` es lo que pide atención —la tinta más
+   * oscura en claro, el blanco puro en oscuro—, `tx2` es el cuerpo y `tx3` el
+   * detalle técnico. Por eso los componentes no saben en qué tema están: piden
+   * "lo que más contrasta" y el tema decide qué es.
+   */
+  --color-sala-1000: #f3ecdf;
+  --color-sala-900: #fffdf9;
+  --color-sala-800: #faf7f1;
+  --color-sala-700: #e7dcc8;
+  --color-sala-bd: #e0d5c0;
+  --color-sala-tx: #1c2521;
+  --color-sala-tx2: #47524c;
+  --color-sala-tx3: #737d77;
+
+  /*
+   * Los dos niveles de atención, en la misma escala tonal.
+   *
+   * `error` es el máximo contraste —lo urgente— y `alerta` un tono intermedio:
+   * lo que hay que atender pero no ya. La diferencia la refuerza el rótulo, que
+   * dice "Urgente" o "Atender" con todas las letras.
+   */
+  --color-sala-alerta: #5c6a63;
+  --color-sala-error: #1c2521;
+
+  /* El anillo del punto que pulsa y la sombra de las tarjetas, por tema. */
+  --sala-pulso: rgba(28, 37, 33, 0.22);
+  --sala-sombra: 0 12px 32px -22px rgba(28, 40, 33, 0.5);
+
   --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial,
     sans-serif;
@@ -66,6 +110,62 @@
 
 html {
   scroll-behavior: smooth;
+}
+
+/*
+ * El fondo del documento acompaña al tema de la Sala.
+ *
+ * Sin esto, la barra de scroll y el rebote elástico de macOS muestran el color
+ * del sitio —arena— arriba y abajo de la pantalla. Proyectado, esa franja es lo
+ * único que se ve. `color-scheme` es lo que además tiñe la barra de scroll.
+ *
+ * Van con valores literales y no con `var()` porque la variable del tema vive en
+ * el div de la Sala, y `html` no la ve: `:has()` alcanza para detectar la clase,
+ * no para heredar lo que esa clase define.
+ */
+html:has(.sala-tema-claro) {
+  background: #f3ecdf;
+  color-scheme: light;
+}
+
+html:has(.sala-tema-claro) body {
+  background: #f3ecdf;
+}
+
+html:has(.sala-tema-oscuro) {
+  background: #000000;
+  color-scheme: dark;
+}
+
+html:has(.sala-tema-oscuro) body {
+  background: #000000;
+}
+
+/* El tema oscuro: mismos nombres, otra polaridad. */
+.sala-tema-oscuro {
+  --color-sala-1000: #000000;
+  --color-sala-900: #0b0b0b;
+  --color-sala-800: #161616;
+  --color-sala-700: #222222;
+  --color-sala-bd: #2e2e2e;
+  --color-sala-tx: #ffffff;
+  --color-sala-tx2: #a8a8a8;
+  --color-sala-tx3: #6b6b6b;
+  --color-sala-alerta: #9e9e9e;
+  --color-sala-error: #ffffff;
+  --sala-pulso: rgba(255, 255, 255, 0.35);
+  --sala-sombra: 0 18px 40px -28px rgba(0, 0, 0, 0.9);
+}
+
+/*
+ * Modo presentación: los rótulos en versalitas crecen con el resto.
+ *
+ * Van por CSS y no por prop porque los usa cada componente de la Sala, y
+ * pasarles la bandera del proyector a los quince sería atravesar con una
+ * decisión de proyección componentes que no tienen por qué conocerla.
+ */
+.sala-presentacion .rotulo {
+  font-size: 12.5px;
 }
 
 html,
@@ -101,13 +201,13 @@ summary::-webkit-details-marker {
 
 @keyframes pulseRing {
   0% {
-    box-shadow: 0 0 0 0 rgba(20, 131, 106, 0.45);
+    box-shadow: 0 0 0 0 var(--sala-pulso);
   }
   70% {
-    box-shadow: 0 0 0 14px rgba(20, 131, 106, 0);
+    box-shadow: 0 0 0 14px transparent;
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(20, 131, 106, 0);
+    box-shadow: 0 0 0 0 transparent;
   }
 }
 
@@ -121,6 +221,18 @@ summary::-webkit-details-marker {
   30% {
     opacity: 1;
     transform: translateY(-3px);
+  }
+}
+
+/* La conclusión cruzada entrando, una vez que la cadena está completa. */
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 

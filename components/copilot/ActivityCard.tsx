@@ -1,4 +1,4 @@
-import { toolLabel, type DemoActivity } from "@/lib/copilot";
+import { sourceLabel, toolLabel, type DemoActivity } from "@/lib/copilot";
 
 /**
  * Lo que acaba de pasar, en vivo.
@@ -45,8 +45,16 @@ export function ActivityCard({
         >
           Actividad desde que comenzó la demostración
         </h3>
+        {/*
+          Dice "sesión de demostración" y NO "datos reales".
+
+          Los conteos son de interacciones que de verdad ocurrieron, pero contra
+          una clínica ficticia y en un ambiente montado para la charla.
+          Rotularlos como "datos reales" invita a que alguien los lea como
+          información de un cliente, que es precisamente lo que no son.
+        */}
         <span className="rounded-full border border-menta-200 bg-blanco px-3 py-1 font-mono text-[10.5px] tracking-[0.08em] text-verde-800 uppercase">
-          En vivo · datos reales
+          En vivo · sesión de demostración
         </span>
       </div>
 
@@ -118,7 +126,7 @@ export function ActivityCard({
                   presentacion ? "text-[14px]" : "text-[12.5px]"
                 }`}
               >
-                {s.source}
+                {sourceLabel(s.source)}
                 {s.campaignId ? ` · ${s.campaignId}` : ""} · {s.count}
               </li>
             ))}

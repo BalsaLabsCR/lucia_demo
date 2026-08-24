@@ -399,6 +399,26 @@ export function toolLabel(tool: string): string {
   return NOMBRE_DE_HERRAMIENTA[tool] ?? tool;
 }
 
+/**
+ * Cómo se lee cada fuente en pantalla.
+ *
+ * `qr` no es "QR" por capricho tipográfico: si el público escaneó un código
+ * pegado en la pared, decir "Instagram" sería falso, y el panel proyectado no
+ * puede afirmar de dónde vino alguien mejor de lo que se sabe. La fuente que se
+ * pone en el enlace del QR tiene que ser la que de verdad ocurrió.
+ */
+const NOMBRE_DE_FUENTE: Record<string, string> = {
+  instagram: "Instagram",
+  facebook: "Facebook",
+  website: "Sitio web",
+  qr: "QR",
+  direct: "Directo",
+};
+
+export function sourceLabel(source: string): string {
+  return NOMBRE_DE_FUENTE[source] ?? source;
+}
+
 /** true si no pasó nada todavía: sirve para no mostrar una tarjeta de ceros. */
 export function isQuiet(activity: DemoActivity | null): boolean {
   return !activity || activity.conversations === 0;

@@ -90,6 +90,24 @@ export function getAttribution(): Record<string, string> | null {
   }
 }
 
+/**
+ * Empieza una conversación nueva, con id de sesión nuevo.
+ *
+ * Existe por el Acto 5 de la demostración: después de aprobar una directiva hay
+ * que mostrar que Lucía la aplica, y hacerlo en el MISMO chat no lo demuestra —
+ * esa conversación ya trae su historial, y quien mira no puede distinguir si
+ * respondió distinto por la directiva o por lo que se dijo antes. Con una
+ * sesión nueva la única diferencia es la directiva.
+ *
+ * La atribución NO se borra: la persona sigue habiendo llegado por donde llegó,
+ * y esto es una conversación nueva, no una visita nueva.
+ */
+export function startNewConversation(): string {
+  const id = crypto.randomUUID();
+  sessionStorage.setItem(SESSION_KEY, id);
+  return id;
+}
+
 export interface PendingMessage {
   id: string;
   /** assistant = Lucía · owner = una persona del equipo. */

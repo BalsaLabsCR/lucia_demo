@@ -424,6 +424,7 @@ function ProductionSection({ campaign }: { campaign: CampaignDetail }) {
           >
             Descargar el paquete (JSON con guion, tiempos, textos y enlaces)
           </button>
+
         </div>
       )}
     </section>

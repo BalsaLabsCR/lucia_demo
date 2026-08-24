@@ -13,6 +13,7 @@ import { StatusChip } from "./MarketingExplorer";
 import { ConceptCards } from "./ConceptCards";
 import { StoryboardBoard } from "./StoryboardBoard";
 import { AssetsReview } from "./AssetsReview";
+import { VideoPromptSection } from "./VideoPromptSection";
 
 /** Cada cuánto se relee mientras hay generación en curso (ms). */
 const POLL_MS = 3_000;
@@ -220,6 +221,20 @@ export function CampaignWorkspace({ id, onChange }: { id: string; onChange: () =
           }
         />
       )}
+
+      {/*
+        El prompt de video, apenas hay guion.
+
+        Vivía dentro de `AssetsReview`, que solo aparece cuando ya se generó
+        material — imágenes y voz, el paso caro. Eso dejaba el prompt detrás de
+        la única puerta que uno querría saltarse: se puede llevar una campaña a
+        producción con el guion aprobado y el material resuelto por fuera, y en
+        una demostración en vivo generar imágenes es lo que no se hace.
+
+        Con guion ya hay escenas, tiempos y textos: todo lo que el prompt
+        necesita.
+      */}
+      {campaign.storyboard !== null && <VideoPromptSection campaignId={campaign.id} />}
 
       {(campaign.assets.length > 0 || campaign.channelContent !== null) && (
         <AssetsReview

@@ -17,6 +17,8 @@ interface Props {
   onSubmit: (text: string) => void;
   onRetry: () => void;
   onClose: () => void;
+  /** Arranca de cero, con sesión nueva. Ver `startNewConversation`. */
+  onNewConversation: () => void;
 }
 
 /** Pantalla completa en móvil; panel flotante de 390px en desktop. */
@@ -28,6 +30,7 @@ export function ChatPanel({
   onSubmit,
   onRetry,
   onClose,
+  onNewConversation,
 }: Props) {
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -59,6 +62,21 @@ export function ChatPanel({
             Demo en vivo — responde una IA
           </p>
         </div>
+        {/*
+          Empezar de cero. Está en la cabecera y no escondido en un menú porque
+          durante la demostración se usa a la vista de todos: es lo que prueba
+          que Lucía cambió de comportamiento por la directiva aprobada y no por
+          lo que ya se había dicho en el chat.
+        */}
+        <button
+          type="button"
+          onClick={onNewConversation}
+          aria-label="Iniciar una conversación nueva"
+          title="Iniciar una conversación nueva"
+          className="h-11 rounded-xl bg-blanco/12 px-3 text-[12.5px] font-semibold text-crema-100"
+        >
+          Nueva
+        </button>
         <button
           type="button"
           onClick={onClose}

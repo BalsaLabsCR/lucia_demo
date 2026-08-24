@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { OPEN_CHAT_EVENT, type OpenChatDetail } from "@/lib/chatEvents";
 import { CLINIC } from "@/lib/clinic";
-import { captureAttribution, fetchMessagesSince, sendMessage } from "@/lib/luciaApi";
+import {
+  captureAttribution,
+  fetchMessagesSince,
+  sendMessage,
+  startNewConversation,
+} from "@/lib/luciaApi";
 import { ChatPanel } from "./ChatPanel";
 import type { ChatMessage } from "./types";
 
@@ -84,6 +89,21 @@ export function ChatWidget() {
    */
   useEffect(() => {
     captureAttribution(window.location.search);
+  }, []);
+
+  /**
+   * Empezar de cero: sesión nueva y pantalla limpia.
+   *
+   * El sondeo cuelga de `open` y del último mensaje visto, así que limpiar la
+   * lista lo reinicia solo. La atribución NO se toca: la persona sigue habiendo
+   * llegado por donde llegó.
+   */
+  const nuevaConversacion = useCallback(() => {
+    startNewConversation();
+    setMessages([GREETING]);
+    setInput("");
+    setTyping(false);
+    abortRef.current?.abort();
   }, []);
 
   /**
@@ -243,6 +263,7 @@ export function ChatWidget() {
           onSubmit={submit}
           onRetry={retry}
           onClose={() => setOpen(false)}
+          onNewConversation={nuevaConversacion}
         />
       )}
 

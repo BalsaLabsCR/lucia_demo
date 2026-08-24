@@ -64,6 +64,8 @@ WEB_CHAT_ALLOWED_ORIGINS="http://localhost:3001"
 | `components/marketing/` | El taller de una campaña, paso por paso |
 | `app/lucia/copiloto/` | **Copiloto de Negocio**: métricas, alertas, recomendaciones con evidencia, aprobación y directivas |
 | `components/copilot/` | El centro de decisión: resumen, alertas, tarjetas de recomendación, directivas y selector de escenarios |
+| `app/lucia/negocio/` | **Sala de Operación**: seis agentes por área, con impacto económico de la IA y consulta a los documentos. Es una MAQUETA — ver abajo |
+| `components/negocio/`, `lib/negocio/datos.ts` | La maqueta entera. Todo sale de `datos.ts`, escrito a mano; lo único que consulta de verdad es la pestaña de Documentos |
 | `app/api/lucia/` | Proxies server-side al backend (`/admin/*`) con `LUCIA_ADMIN_API_KEY` |
 | `lib/knowledge.ts`, `lib/chats.ts`, `lib/appointments.ts`, `lib/leads.ts`, `lib/marketing.ts`, `lib/copilot.ts` | Tipos espejo de los del backend (allá con zod) |
 | `scripts/check-copilot.tsx` | Batería del panel del copiloto: renderiza los componentes a HTML y revisa lo que sale. `npm run check:copilot` |
@@ -97,11 +99,84 @@ Dos superficies distintas, y la diferencia importa: la pública la llama el nave
 | `/admin/marketing/*` | Todo el plugin de marketing: campañas, conceptos, guion, material, aprobaciones, métricas. Un solo proxy atrapa-todo en `app/api/lucia/marketing/[...path]` |
 | `…/assets/:id/content` | Los bytes de un archivo, detrás de `adminAuth`. El proxy los reenvía en binario y el navegador los pide como si fueran de este sitio: **no existe ninguna URL pública del material** |
 | `/admin/business/*` | Todo el copiloto: resumen, análisis, métricas, señales, recomendaciones, aprobación, ejecución de acciones, directivas y escenarios. Un solo proxy atrapa-todo en `app/api/lucia/copilot/[...path]` |
+| `GET /admin/documents` | Catálogo de los documentos ingeridos, con cuántos fragmentos tiene cada uno |
+| `POST /admin/documents/ask` | Una pregunta contra los documentos: búsqueda semántica + respuesta con citas. Es lo único de `/lucia/negocio` que consulta de verdad |
 
 La sección de Marketing es la única que **escribe** cosas que después se
 publican, así que vale repetirlo: el navegador nunca habla con OpenAI ni con
 ningún proveedor. Pide al proxy, el proxy al backend de la clínica, y el backend
 —el único que tiene las llaves— al proveedor.
+
+## La Sala de Operación
+
+`/lucia/negocio` es una **maqueta**, y conviene tenerlo claro antes de leer una
+línea de su código: seis pestañas —Dirección, Ventas, Operación, Planilla,
+Mercado, Documentos— con seis agentes que vigilan un área cada uno. Existe para
+una charla: muestra cómo se vería un negocio operado con IA como capa central,
+no un producto terminado.
+
+Tiene **dos temas y ningún acento de color**: la jerarquía la lleva el contraste
+contra el fondo. `sala-tx` es lo que pide atención —la tinta más oscura en
+claro, el blanco puro en oscuro—, `tx2` es el cuerpo y `tx3` el detalle técnico.
+Los componentes no saben en qué tema están: piden "lo que más contrasta" y el
+tema decide qué es, así que la pantalla se invierte entera cambiando diez
+variables. Lo único que se pinta al revés —fondo sólido, letra del color del
+fondo— es el chip de un hallazgo urgente, y por eso se reserva para eso.
+
+**El claro es el default, y es el que hay que usar en un proyector.** Un
+proyector no proyecta negro: proyecta ausencia de luz, así que en una sala con
+las luces prendidas el "negro" es el gris de la pantalla iluminada por el
+ambiente y el contraste se desploma — lo primero que se pierde son los rótulos
+en mono de 10px y los bordes al 20% de opacidad, que es medio panel. Con fondo
+claro pasa al revés: el aparato tira luz a máxima potencia y le gana al
+ambiente. El oscuro se queda para una sala a oscuras, donde sí se ve mejor.
+
+Se cambia con la tecla **`t`**, con el botón del encabezado, o con `?tema=oscuro`
+en la URL — igual que `?tab=`, para poder dejar el enlace preparado.
+
+Todo sale de `lib/negocio/datos.ts`, un archivo escrito a mano. No corre ningún
+agente, no se llama a ningún modelo, no se consulta ninguna base — y por eso la
+pantalla funciona con el backend caído, que en una charla es media garantía.
+
+**La única excepción es la pestaña de Documentos**, que sí consulta de verdad:
+los PDFs de la clínica están ingeridos con embeddings y la pregunta se resuelve
+con búsqueda semántica contra `/admin/documents/*`. Es la única con caja de
+texto, y es a propósito: un panel donde todo se pregunta es un chatbot con
+pestañas.
+
+### Dos capas, y el corte se anuncia
+
+Cada pestaña está partida en dos, con un separador rotulado en el medio:
+
+- **Arriba, el tablero.** KPIs con su línea de doce meses, series de tiempo,
+  columnas, un mapa de calor de la agenda, tablas. Es lo que un negocio ya tiene
+  —o querría tener— en su Power BI.
+- **Abajo, la lectura.** Los hallazgos del agente del área, con su prosa, lo que
+  descartó, la evidencia y la traza; y las propuestas con aprobar → ejecutar.
+
+Esa división es el argumento entero: sin la primera mitad la segunda parece
+magia, y con ella parece el paso siguiente. Las gráficas están dibujadas a mano
+en SVG (`components/negocio/Graficas.tsx`) porque son cuatro formas, usan la
+paleta de la Sala y se invierten enteras con el tema — una librería traería cien
+opciones para usar dos.
+
+### Tres cosas que hace a propósito
+
+- **Los números cierran entre pestañas, y también en el tiempo.** Las cifras
+  base se declaran una vez en `datos.ts` y el resto se deriva: los siete
+  servicios suman el ingreso del mes, el uso de agenda sale de dividir citas
+  entre cupos, y **el último valor de cada serie mensual es la cifra del mes que
+  muestra el panel**. Que Planilla diga 57% y Operación 64% es la única forma
+  realista de que esto se caiga en vivo.
+- **El gráfico de 14 meses incluye el agosto anterior a propósito.** Muestra que
+  agosto siempre es bajo — alguien lo va a decir en voz alta — y ahí es cuando
+  el hallazgo contesta que este bajó 19,4% contra el 7,7% del año pasado, y que
+  se cayó un solo servicio. El tablero solo llevaba a la conclusión equivocada.
+- **Nada persiste.** Aprobar y ejecutar viven en `useState`: recargar deja la
+  maqueta lista para la charla siguiente, sin botón de reinicio.
+
+Los documentos y su ingesta viven en el repo del backend
+(`docs/fuente/*.txt` → `npm run docs:pdf` → `npm run ingest`).
 
 ## El Copiloto de Negocio
 

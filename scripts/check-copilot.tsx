@@ -47,6 +47,7 @@ import {
   type ProposedAction,
   type ScenarioState,
 } from "../lib/copilot";
+import { parseVideoPrompt } from "../lib/videoPrompt";
 
 let failures = 0;
 function check(name: string, ok: boolean, detail = ""): void {
@@ -698,7 +699,21 @@ function main(): void {
   check(
     "dice de cuándo es lo que muestra, con todas las letras",
     tarjeta.includes("Actividad desde que comenzó la demostración") &&
-      tarjeta.includes("En vivo · datos reales")
+      tarjeta.includes("En vivo · sesión de demostración")
+  );
+  // Los conteos son de interacciones que ocurrieron, pero contra una clínica
+  // ficticia. Llamarlos "datos reales" invita a leerlos como información de un
+  // cliente, que es exactamente lo que no son.
+  check(
+    "y NO se presenta como 'datos reales'",
+    !tarjeta.toLowerCase().includes("datos reales")
+  );
+  check(
+    "la fuente se lee como la escribiría una persona",
+    texto(render(<ActivityCard activity={{ ...actividad, bySource: [{ source: "qr", campaignId: "wework-blanqueamiento", count: 3 }] }} presentacion={false} />)).includes(
+      "QR · wework-blanqueamiento"
+    ),
+    "qr → QR, instagram → Instagram"
   );
   check(
     "y avisa que no muestra datos de nadie",
@@ -720,7 +735,8 @@ function main(): void {
   );
   check(
     "cierra el círculo: de qué campaña llegaron",
-    tarjeta.includes("instagram") && tarjeta.includes("blanqueamiento-sensibilidad")
+    tarjeta.includes("Instagram") && tarjeta.includes("blanqueamiento-sensibilidad"),
+    "la campaña se muestra con su id tal cual: es el mismo que iría en un anuncio real"
   );
 
   // Sin nadie que haya llegado por una campaña, esa sección no ocupa espacio
@@ -771,6 +787,45 @@ function main(): void {
     "cuando no borró nada lo dice igual, en vez de callarlo",
     sinBorrado.includes("no se borró ninguna conversación"),
     sinBorrado
+  );
+
+  // =====================================================================
+  section("12. El prompt de video, partido para leerlo");
+  // =====================================================================
+
+  // Lo que se proyecta tiene que ser legible, y lo que se copia tiene que ser
+  // EXACTAMENTE lo mismo. Por eso el corte en bloques se hace sobre el texto
+  // que ya llegó, y no se pide estructurado al servidor: dos versiones del
+  // mismo prompt son dos oportunidades de pegar la equivocada.
+  const promptCrudo = [
+    "PIEZA\nFormato: Reel de Instagram · 9:16 · 15s\nNegocio: Sonrisa Pura",
+    "ESCENAS Y RITMO\nEscena 1 (0-4s, 4s) — gancho\n  Imagen: primer plano",
+    'QUÉ EVITAR\n- No digas ni escribas "no duele".',
+  ].join("\n\n");
+
+  const bloques = parseVideoPrompt(promptCrudo);
+  check(
+    "parte el prompt en sus bloques, con título y cuerpo",
+    bloques.length === 3 &&
+      bloques[0].title === "PIEZA" &&
+      bloques[2].title === "QUÉ EVITAR",
+    bloques.map((b) => b.title).join(" · ")
+  );
+  check(
+    "el cuerpo conserva los saltos de línea de las escenas",
+    bloques[1].body.includes("Escena 1 (0-4s, 4s) — gancho\n  Imagen: primer plano")
+  );
+  check(
+    "y no se pierde el bloque de lo que NO se puede decir",
+    bloques[2].body.includes("no duele")
+  );
+
+  // Un bloque sin encabezado reconocible se muestra entero y sin título: peor
+  // sería esconderlo por no encajar en el formato esperado.
+  const suelto = parseVideoPrompt("una línea suelta sin encabezado");
+  check(
+    "un bloque sin encabezado se muestra igual, sin título",
+    suelto.length === 1 && suelto[0].title === "" && suelto[0].body.includes("una línea suelta")
   );
 
   console.log(failures === 0 ? "\nTODO OK" : `\n${failures} FALLAS`);
